@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>واجب اليوم</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+   <style>
+    body {
+      font-family: "Tahoma", sans-serif;
+      padding: 15px;
+      max-width: 650px;
+      margin: auto;
+      background: #f8f8f8;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark { background: #1e1e1e; color: #eee; }
+    h2 { text-align: center; margin-bottom: 10px; }
+    .subject { margin-bottom: 12px; }
+    .subject label { font-weight: bold; display: block; margin-bottom: 5px; }
+    .subject input { width: 100%; padding: 6px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+    .suggestions button {
+      flex: 1 1 auto; padding: 4px 7px;
+      border: none; border-radius: 5px; font-size: 12px;
+      cursor: pointer; background: #e0e0e0;
+    }
+    .suggestions button:hover { background: #bbb; }
+    select {
+      width: 100%; padding: 5px; margin-bottom: 8px;
+      border-radius: 5px; border: 1px solid #ccc;
+    }
+    textarea { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    button.main {
+      display: block; width: 100%; padding: 10px;
+      margin: 6px 0; border: none; border-radius: 6px;
+      font-size: 16px; background: #1976d2; color: #fff; cursor: pointer;
+    }
+    #output {
+      margin-top: 15px; padding: 10px;
+      background: #fff; border: 1px solid #ccc; border-radius: 6px;
+      white-space: pre-wrap;
+    }
+    body.dark #output { background: #2a2a2a; border-color: #555; }
+    .top-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; }
+    .top-controls input { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid #ccc; }
+    .mic-btn { background:#ddd; border:none; border-radius:50%; padding:4px 8px; cursor:pointer; margin-left:5px; }
+  </style> 
+</head>
+<body>
+  <div class="top-controls">
+    <button onclick="toggleDark()">🌙/☀️</button>
+    <input type="date" id="dateInput">
+  </div>
+
+  <h2 id="title">Homework Generator </h2>
+
+  <div id="subjects"></div>
+  
+  <h3 id="notesLabel">ملاحظات</h3>
+  <textarea id="notes" placeholder="اكتب الملاحظات هنا (اختياري)"></textarea>
+  
+  <button class="main" onclick="generate()" id="genBtn">توليد الواجب</button>
+  <button class="main" onclick="copyText()" id="copyBtn">نسخ إلى الحافظة</button>
+  <button class="main" onclick="saveData()">💾 حفظ البيانات</button>
+  <button class="main" onclick="clearAll()">🗑️ مسح الكل</button>
+  <button class="main" onclick="selectParagraph()">تحديد الفقرة </button>
+  <button class="main" onclick="addSubject()">➕ إضافة مادة</button> 
+  <button class="main" onclick="shareText()">📤 مشاركة</button>
+  <button class="main" onclick="saveTemplate()">📌 حفظ كقالب</button>
+  <button class="main" onclick="loadTemplate()">📂 تحميل القالب</button>
+  <button class="main" onclick="exportData()">💾 تصدير</button>
+  <button class="main" onclick="document.getElementById('importFile').click()">📂 استيراد</button>
+  <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+
+
+  <div id="output"></div>
+
+  <script>
+    const defaultSubjects = [
+      "اللغة العربية","اللغة الإنكليزية","اللغة الفرنسية","اللغة الكردية",
+      "الرياضيات","الأحياء","الفيزياء","الكيمياء","الحاسوب",
+      "التربية الإسلامية","التربية الرياضية","الفنية"
+    ];
+
+    const smallSuggestions = ["شاغر","داخل","ما داخل","تحضير","واجب","شرح"];
+    const bigSuggestions = [
+      "من صفحة ... إلى صفحة ...","حل تمارين من صفحة ... إلى صفحة ...",
+      "حل تمارين من تمرين ... إلى تمرين ...","امتحان شهري ...",
+      "امتحان نصف السنة ...","امتحان نهائي ...","كتابة موضوع ...",
+      "حل أسئلة الفصل ...","رسم الشكل ..."
+
+    ];
+
+    const container = document.getElementById("subjects");
+
+    function renderSubjects(list) {
+      container.innerHTML = "";
+      list.forEach(sub => addSubject(sub, false));
+    }
+
+    function addSubject(name="", focus=true) {
+      const sub = name || prompt("اسم المادة:");
+      if (!sub) return;
+      const div = document.createElement("div");
+      div.className = "subject";
+      div.innerHTML = `
+        <label>${sub}</label>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <input type="text" data-subject="${sub}">
+          <button class="mic-btn" onclick="startVoice(this)">🎤</button>
+        </div>
+        <div class="suggestions">
+          ${smallSuggestions.map(s => `<button type="button" onclick="addSuggestion(this,'${s}')">${s}</button>`).join("")}
+        </div>
+        <select onchange="addSelectSuggestion(this)">
+          <option value="">اختر جملة جاهزة...</option>
+          ${bigSuggestions.map(s => `<option value="${s}">${s}</option>`).join("")}
+        </select>
+      `;
+      container.appendChild(div);
+
+      // ✅ auto-save while typing
+      const input = div.querySelector("input[type=text]");
+      input.addEventListener("input", saveData);
+
+      if (focus) div.scrollIntoView({behavior:"smooth"});
+    }
+
+    function addSuggestion(btn, text) {
+      const input = btn.closest(".subject").querySelector("input[type=text]");
+      if (input.value && !input.value.endsWith(" ")) input.value += " ";
+      input.value += text;
+      saveData();
+    }
+
+    function addSelectSuggestion(select) {
+      const input = select.closest(".subject").querySelector("input[type=text]");
+      if (select.value) {
+        if (input.value && !input.value.endsWith(" ")) input.value += " ";
+        input.value += select.value;
+        select.value = ""; // reset dropdown
+        saveData();
+      }
+    }
+
+    function generate() {
+      const date = document.getElementById("dateInput").value || new Date().toLocaleDateString("ar-IQ");
+      let text = `===== واجب اليوم (${date}) =====\n\n`;
+      let hasData = false;
+      document.querySelectorAll("#subjects .subject").forEach(div => {
+        const input = div.querySelector("input[type=text]");
+        const subject = input.dataset.subject;
+        const val = input.value.trim();
+        if (val) {
+          text += `${subject} : ${val}\n\n`;
+          hasData = true;
+        }
+      });
+      const notes = document.getElementById("notes").value.trim();
+      if (notes) {
+        text += "===== ملاحظات =====\n\n";
+        notes.split("\n").forEach((n,i)=> text += `${i+1}- ${n}\n`);
+        hasData = true;
+      }
+      if (!hasData) return alert("⚠️ ماكو واجب");
+      document.getElementById("output").textContent = text;
+      saveData();
+    }
+
+    function copyText() {
+      const text = document.getElementById("output").textContent;
+      if (!text) return alert("ماكو شي للنسخ بعد!");
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(()=>alert("تم النسخ ✅"));
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text; document.body.appendChild(textarea);
+        textarea.select(); document.execCommand("copy");
+        document.body.removeChild(textarea);
+        alert("تم النسخ ✅ (قديم)");
+      }
+    }
+
+    function saveData() {
+      const data = {
+        date: document.getElementById("dateInput").value,
+        notes: document.getElementById("notes").value,
+        subjects: []
+      };
+      document.querySelectorAll("#subjects .subject").forEach(div => {
+        const input = div.querySelector("input[type=text]");
+        data.subjects.push({ name: input.dataset.subject, value: input.value });
+      });
+      localStorage.setItem("homeworkData", JSON.stringify(data));
+    }
+
+    function loadData() {
+      const saved = JSON.parse(localStorage.getItem("homeworkData") || "{}");
+      if (saved.date) document.getElementById("dateInput").value = saved.date;
+      if (saved.notes) document.getElementById("notes").value = saved.notes;
+      if (saved.subjects) {
+        renderSubjects(saved.subjects.map(s=>s.name));
+        document.querySelectorAll("#subjects .subject").forEach((div,i)=>{
+          div.querySelector("input[type=text]").value = saved.subjects[i].value;
+        });
+      } else {
+        renderSubjects(defaultSubjects);
+      }
+      // auto-save notes too
+      document.getElementById("notes").addEventListener("input", saveData);
+    }
+
+    function clearAll() {
+      localStorage.removeItem("homeworkData");
+      renderSubjects(defaultSubjects);
+      document.getElementById("notes").value = "";
+      document.getElementById("output").textContent = "";
+      document.getElementById("dateInput").value = new Date().toISOString().split("T")[0];
+    }
+
+    function toggleDark() {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("darkMode", document.body.classList.contains("dark"));
+    }
+    function loadDark() {
+      if (localStorage.getItem("darkMode")==="true") document.body.classList.add("dark");
+    }
+
+    // Voice Input
+    function startVoice(btn) {
+      const input = btn.closest(".subject").querySelector("input[type=text]");
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return alert("🎤 جهازك لا يدعم الصوت");
+      const recog = new SpeechRecognition();
+      recog.lang = "ar-IQ";
+      recog.start();
+      recog.onresult = e => {
+        input.value += (input.value?" ":"") + e.results[0][0].transcript;
+        saveData();
+      };
+    }
+function getLocalISODate() {
+  const now = new Date(); // client’s local time
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+    // init
+    loadData(); loadDark();
+    if (!document.getElementById("dateInput").value) document.getElementById("dateInput").value = getLocalISODate();
+  
+  
+  
+
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  function selectParagraph() {
+  const element = document.getElementById("output");
+  const range = document.createRange();
+  range.selectNodeContents(element);   // grab all text in the element
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+   
+
+
+
+
+
+    function addSubject(name="", focus=true) {
+      const sub = name || prompt("اسم المادة:");
+      if (!sub) return;
+      const div = document.createElement("div");
+      div.className = "subject";
+      div.innerHTML = `
+        <label>${sub}</label>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <input type="text" data-subject="${sub}" list="auto-list">
+          <button class="mic-btn" onclick="startVoice(this)">🎤</button>
+        </div>
+        <div class="suggestions">
+          ${smallSuggestions.map(s => `<button type="button" onclick="addSuggestion(this,'${s}')">${s}</button>`).join("")}
+        </div>
+        <input list="big-options" placeholder="بحث في الجمل الجاهزة...">
+      `;
+      container.appendChild(div);
+      if (focus) div.scrollIntoView({behavior:"smooth"});
+    }
+
+
+    function shareText() {
+      const text = document.getElementById("output").textContent;
+      if (!text) return alert("ماكو شي للمشاركة");
+      if (navigator.share) {
+        navigator.share({ title: "الواجب", text });
+      } else {
+        alert("جهازك ما يدعم المشاركة المباشرة");
+      }
+    }
+
+    function saveTemplate() {
+      const data = JSON.parse(localStorage.getItem("homeworkData") || "{}");
+      localStorage.setItem("template", JSON.stringify(data));
+      alert("📌 تم حفظ القالب");
+    }
+    function loadTemplate() {
+      const tpl = JSON.parse(localStorage.getItem("template") || "{}");
+      if (!tpl.subjects) return alert("ماكو قالب محفوظ");
+      renderSubjects(tpl.subjects.map(s=>s.name));
+      document.querySelectorAll("#subjects .subject").forEach((div,i)=>{
+        div.querySelector("input[type=text]").value = tpl.subjects[i].value;
+      });
+      document.getElementById("notes").value = tpl.notes || "";
+      alert("📂 تم تحميل القالب");
+    }
+
+    function exportData() {
+      const data = localStorage.getItem("homeworkData");
+      if (!data) return alert("ماكو بيانات");
+      const blob = new Blob([data], {type:"application/json"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "homework.json";
+      a.click();
+    }
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        localStorage.setItem("homeworkData", reader.result);
+        loadData();
+        alert("✅ تم الاستيراد");
+      };
+      reader.readAsText(file);
+    }
+
+
+    function toggleLang() {
+      const ar = document.body.lang==="ar";
+      document.body.lang = ar ? "en" : "ar";
+      document.getElementById("title").textContent = ar ? "Homework Generator" : "مولّد الواجب اليومي";
+      document.getElementById("notesLabel").textContent = ar ? "Notes" : "ملاحظات";
+      document.getElementById("genBtn").textContent = ar ? "Generate Homework" : "توليد الواجب";
+      document.getElementById("copyBtn").textContent = ar ? "Copy to Clipboard" : "نسخ إلى الحافظة";
+    }
+
+
+
+  
+  
+  
+  
+  </script>
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
