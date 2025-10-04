@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>morse code converter</title>
+  <style>
+    body {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+
+    }
+
+    textarea {
+      min-width: 400px;
+      resize: horizontal;
+      overflow: scroll;
+
+    }
+
+    #copyBtn {
+      background: linear-gradient(45deg, #833AB4, #FD1D1D, #FCAF45);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: "Cairo", sans-serif;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    #copyBtn:hover {
+      opacity: 0.85;
+      transform: scale(1.05);
+    }
+
+    #output {
+      font-weight: bold;
+      font-size: 1.2rem;
+      background-color: grey;
+      height: auto;
+      max-height: 300px;
+      width: 650px;
+      overflow-y: scroll;
+    }
+  </style>
+</head>
+
+<body>
+
+
+
+  <h1>welcome to our morse code conveter</h1>
+  <h2>type your regular english sentince to convert to morse code</h2>
+  <textarea name="" id="input" cols="60" rows="15"></textarea>
+  <div>
+    <button type="button"
+      onclick="document.getElementById('input').value = '' ; document.getElementById('output').textContent = '' "> clear
+    </button>
+    <button type="button" id="copyBtn">copy morse code text </button>
+    <button type="button"
+      onclick="CON = false ;document.getElementById('input').value = '' ; document.getElementById('output').textContent = ''  ; document.getElementById('output').textContent = '' ">word
+      to morse</button>
+    <button type="button"
+      onclick="CON = true ; document.getElementById('input').value = '' ; document.getElementById('output').textContent = ''">
+      morse to code</button>
+  </div>
+  <h2> output :</h2>
+  <p id="output"></p>
+
+
+  <script defer>
+    let CON = false
+    let DODE = false
+    const $ = (sel, ctx = document) => ctx.querySelector(sel);
+    const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+    function CL(message) { console.log(message); }
+    function FS(Function) { console.log(` ✅ the ${Function} function has been called and ran successfully `); }
+    function CE(message, error) { console.error(` ❌ there has been a problem with ${message} , cause : \n ${error}`); }
+    function C() { console.clear(); }
+    function D() {
+      document.designMode = DODE ? "off" : "on";
+      CL(`design mode ${DODE ? "disabled" : "enabled"}`); DODE = !DODE;
+    }
+
+
+    const input = $("#input")
+    const output = $("#output")
+    input.addEventListener("input", () => {
+      const MorseCode = {
+        "a": ".-", "b": "-...", "c": "-.-.", "d": "-..",
+        "e": ".", "f": "..-.", "g": "--.", "h": "....",
+        "i": "..", "j": ".---", "k": "-.-", "l": ".-..",
+        "m": "--", "n": "-.", "o": "---", "p": ".--.",
+        "q": "--.-", "r": ".-.", "s": "...", "t": "-",
+        "u": "..-", "v": "...-", "w": ".--", "x": "-..-",
+        "y": "-.--", "z": "--..",
+
+        "0": "-----", "1": ".----", "2": "..---", "3": "...--",
+        "4": "....-", "5": ".....", "6": "-....", "7": "--...",
+        "8": "---..", "9": "----.",
+
+        ".": ".-.-.-", ",": "--..--", "?": "..--..", "'": ".----.",
+        "!": "-.-.--", "/": "-..-.", "(": "-.--.", ")": "-.--.-",
+        "&": ".-...", ":": "---...", ";": "-.-.-.",
+        "=": "-...-", "+": ".-.-.", "-": "-....-",
+        "_": "..--.-", "\"": ".-..-.", "$": "...-..-", "@": ".--.-.",
+        " ": " "
+      };
+      const REVERSED_MORSE = Object.fromEntries(
+        Object.entries(MorseCode).map(([key, val]) => [val, key])
+      );
+      let words = ""
+      let result = ""
+      let letters = ""
+      let decode = ""
+      if (CON === false) {
+
+        let IV = input.value.toLowerCase().trim();
+
+        for (let i of IV) {
+          if (i === " ") {
+            result += MorseCode[i];
+          }
+          else {
+            result += MorseCode[i] + "/";
+          }
+        }
+        output.textContent = result
+      }
+      if (CON === true) {
+
+        let IV = input.value
+        words = IV.split(" ")
+        words.forEach(element => {
+          letters = element.split("/")
+          decode = letters.map((symbol) => REVERSED_MORSE[symbol]).join("")
+          result += decode + " "
+        });
+        output.textContent = result
+      }
+    })
+
+    document.getElementById("copyBtn").addEventListener("click", () => {
+      const text = document.getElementById("output").textContent;
+      navigator.clipboard.writeText(text)
+        .then(() => alert("Copied to clipboard ✅"))
+        .catch(err => alert("Failed to copy ❌ " + err));
+    });
+
+  </script>
+</body>
+
+</html>
