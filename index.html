@@ -131,11 +131,16 @@ const overlay = document.getElementById("overlay");
 function openInNewTab(file) {
   overlay.classList.add("show");
   setTimeout(() => {
-    window.open(file, "_blank", "noopener,noreferrer");
+    // ensure proper path inside GitHub Pages
+    const base = window.location.pathname.replace(/[^/]+$/, "");
+    const fullPath = base + file;
+    window.open(fullPath, "_blank", "noopener,noreferrer");
     overlay.classList.remove("show");
-  }, 700); // small delay for the visual effect
+  }, 700);
 }
+
 </script>
 
 </body>
 </html>
+
