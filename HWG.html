@@ -4,7 +4,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Homework Generator</title>
-  <link rel="manifest" href="manifest.json">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
 
@@ -184,6 +183,7 @@
   <button type="button" class="main" onclick="shareText()">📤 Share</button>
   <button type="button" class="main" onclick="saveTemplate()">📌 Save Template</button>
   <button type="button" class="main" onclick="loadTemplate()">📂 Load Template</button>
+ <button type="button" class="main" onclick="clearStorage()">🗑️ Clear Local Storage</button>
 
   <aside>Made by <strong><i>Ali Samer Sabah from Al-Kadhraa DHS</i></strong></aside>
 
@@ -196,6 +196,13 @@
   <div id="output"></div>
 
   <script>
+    function clearStorage() {
+  localStorage.clear();
+  alert("🧹 Local Storage cleared completely!");
+  clearAll(); // optional: resets interface
+}
+
+    
     const defaultSubjects = [
       "اللغة العربية", "اللغة الإنكليزية", "اللغة الفرنسية", "اللغة الكردية",
       "الرياضيات", "الأحياء", "الفيزياء", "الكيمياء", "الحاسوب",
@@ -332,21 +339,43 @@
       localStorage.setItem("homeworkData", JSON.stringify(data));
     }
 
-    function loadData() {
-      const saved = JSON.parse(localStorage.getItem("homeworkData") || "{}");
-      if (saved.date) document.getElementById("dateInput").value = saved.date;
-      if (saved.notes) document.getElementById("notes").value = saved.notes;
-      if (saved.subjects) {
-        renderSubjects(saved.subjects.map(s => s.name));
-        document.querySelectorAll("#subjects .subject").forEach((div, i) => {
-          div.querySelector("input[type=text]").value = saved.subjects[i].value;
-        });
-      } else {
-        renderSubjects(defaultSubjects);
-      }
-      // auto-save notes too
-      document.getElementById("notes").addEventListener("input", saveData);
-    }
+function loadData() {
+  const saved = JSON.parse(localStorage.getItem("homeworkData") || "{}");
+
+  // ✅ Restore date and notes if available
+  if (saved.date) document.getElementById("dateInput").value = saved.date;
+  if (saved.notes) document.getElementById("notes").value = saved.notes;
+
+  // ✅ Always merge defaults with saved subjects (never lose any)
+  const savedSubjects = Array.isArray(saved.subjects) ? saved.subjects : [];
+  const allSubjects = [...new Set([
+    ...defaultSubjects,
+    ...savedSubjects.map(s => s.name)
+  ])];
+
+  // ✅ Render all subjects
+  renderSubjects(allSubjects);
+
+  // ✅ Restore saved input values
+  savedSubjects.forEach(s => {
+    const input = document.querySelector(`input[data-subject="${s.name}"]`);
+    if (input) input.value = s.value || "";
+  });
+
+  // ✅ Auto-repair: rewrite clean, complete data back to localStorage
+  const repairedData = {
+    ...saved,
+    subjects: allSubjects.map(name => {
+      const found = savedSubjects.find(s => s.name === name);
+      return { name, value: found ? found.value : "" };
+    })
+  };
+  localStorage.setItem("homeworkData", JSON.stringify(repairedData));
+
+  // ✅ Auto-save notes too
+  document.getElementById("notes").addEventListener("input", saveData);
+}
+
 
     function clearAll() {
       localStorage.removeItem("homeworkData");
@@ -508,5 +537,6 @@
 
 
 </body>
+
 
 </html>
