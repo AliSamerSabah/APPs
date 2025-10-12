@@ -1,0 +1,6 @@
+{
+  "name": "Homework Generator",
+  "short_name": "Homework",
+  "start_url": ".",
+  "display": "standalone"
+}
